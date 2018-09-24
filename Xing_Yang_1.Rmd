@@ -1,0 +1,168 @@
+---
+title: "Homework 1"
+author: "Xing Yang"
+date: "2017/9/11"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+##3.2.4
+###Question 3
+
+```{r}
+?mpg
+```
+
+drv variable describes which wheels drive.
+f = front-wheel drive, r = rear wheel drive, 4 = 4wd.
+###Queston 4
+
+```{r}
+ggplot(data = mpg)+
+  geom_point(mapping = aes(x = displ, y = hwy))
+```
+
+##3.3.1
+###Quetion 2
+
+```{r}
+?mpg
+mpg
+```
+
+The categorical variables are manufacturer, model, trans, drv, fl, class.
+The continuous varialbes are displ, cyl, cty, hwy.
+"chr" are categorical variables, "dbl" or "int" are continuous varialbes.
+
+##3.5.1
+###Question 3
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy)) +
+  facet_grid(drv ~ .)
+
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy)) +
+  facet_grid(. ~ cyl)
+```
+
+The first graph shows facet in a columns with different car's drivetrain. The second graph shows facet in a row wiht different number of cylinders.
+
+
+$$x = 100 * y + z - 10 / 33 + 10 % 3$$
+
+
+. makes the facet in only one dimension. 
+
+###Question 5
+
+```{r}
+?facet_wrap
+```
+
+In facet_wrap, nrow and ncol are the numbers of rows and columns, dir also controls the layout of the individual panels. But in facet_grid, the numbers of rows and columns depends on the faceting variables. 
+
+##3.6.1
+###Question 2
+This code will show the relationship of the engine displacement and highway fuel consumption in differert car???s drivetrain. This relationship would be negative, and four wheel drive is higher in displ and lower hwy than others.
+
+```{r}
+?mpg
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy, color = drv)) + 
+  geom_point() + 
+  geom_smooth(se = FALSE)
+```
+
+As we can see, this plot shows that the more engine displacement means the lower highway fuel consumption. And obviously, four wheel drive has higer engine displacement and lower highway fuel consumption.
+
+###Question 6
+
+```{r}
+#1
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) + 
+  geom_point(color = "black") +
+  geom_smooth(se = FALSE, color = "blue")
+#2
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy, group = drv)) + 
+  geom_point(color = "black") +
+  geom_smooth(se = FALSE, color = "blue")
+#3
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy, color = drv)) + 
+  geom_point() + 
+  geom_smooth(se = FALSE)
+#4
+ggplot() + 
+  geom_point(data = mpg, mapping = aes(x = displ, y = hwy, color = drv)) + 
+  geom_smooth(data = mpg, mapping = aes(x = displ, y = hwy), se = FALSE)
+#5
+ggplot() + 
+  geom_point(data = mpg, mapping = aes(x = displ, y = hwy, color = drv)) + 
+  geom_smooth(data = mpg, mapping = aes(x = displ, y = hwy, linetype = drv), se = FALSE)
+#6
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) +
+  geom_point(size = 5, colour = "white") + 
+  geom_point(aes(color = drv)) 
+```
+
+##3.7.1
+###Question1
+
+```{r}
+?stat_summary
+ggplot(data = diamonds) +
+  geom_pointrange(mapping = aes(x = cut, y = depth),
+                  stat = "summary",
+                  fun.ymin = min,
+                  fun.ymax = max,
+                  fun.y = median)
+```
+
+
+##3.8.1
+###Question1
+Since cty and hwy are intergers, many of the data points overlap and hide each other. We can fix it by adding jitter.
+
+```{r}
+ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) + 
+  geom_point() +
+  geom_jitter()
+```
+
+###Question3
+
+```{r}
+ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) + 
+  geom_point() +
+  geom_jitter()
+
+ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) + 
+  geom_point() +
+  geom_count()
+```
+
+geom_jitter randomly moves the points to stop them overlapping.geom_count() counts the number of observations at each coordinate, which is is another variant of geom_point(). 
+
+##3.9.1
+###Question4
+
+```{r}
+ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) +
+  geom_point() + 
+  geom_abline() +
+  coord_fixed()
+```
+
+The relationship between city and highway mpg is a positvie linear relationship.
+coord_fixed() means that x and y axes of the plot have same unit, which is easy to compare the relationship between the two varivables.
+geom_abline() plots the estimated slope between the two variables.
+
+
+
+

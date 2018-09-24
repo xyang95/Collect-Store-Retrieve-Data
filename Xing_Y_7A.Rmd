@@ -1,0 +1,53 @@
+---
+title: "Fall 2017 DA5020 Homework 7A"
+author: "Xing Yang"
+date: "2017/10/16"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###Part B
+
+```{r}
+a <- read.csv("/Users/xingyang/Desktop/5020/a.csv")
+nrow(a)
+a$biz.name
+```
+
+###Part C
+
+I used "Gresper" and "Instant Data Scraper" to extract data from the Yelp website. For my part, I think that "Instant Data Scraper" would be better. This tool is very easy to scrape data from a website, and can extract many pages. Just like this picture,
+![Text](/Users/xingyang/Desktop/5020/IDS.png)
+it can automatically generated a data set, if you do not want, you can click "Try another table" to chaange, if you want, you can choose which colounms you want, and you can locate the "next" button to automaticlly extract data in next page.
+![Text](/Users/xingyang/Desktop/5020/nx.png)
+Then you can set "Min delay" time and "Max delay" time, after you do that, you will have some time to stop scarling if you just want to crawl a few pages. Finally you can download directly. It is very convenient.
+
+Not like "Instant Data Scraper" that can extract the vairable by itself, this one need to click what you want and sometime it would choose more vairable than you clicked, so you need to delete. 
+![Text](/Users/xingyang/Desktop/5020/sc.png)
+Also, this one can extract many pages,
+![Text](/Users/xingyang/Desktop/5020/nnx.png)
+but you cannot set how many pages you want to scrape, the first one you can stop when you got enough data. After that, you need to name this file and programm in its webstie I think this useless and you cannot find that website extracted data such that yelp,
+![Text](/Users/xingyang/Desktop/5020/name.png)
+and you cannot download data directly, it will send you a email or Google drive. One more thing, the first one is free, you can use it many times but the second you only can use three times per month. 
+
+So I think "Instant Data Scraper" is much better for me. 
+
+##Part D
+
+https://www.yelp.com/search?find_desc=Burgers&start=0&l=p:MA:Boston::%5BAllston/Brighton,Back_Bay,Beacon_Hill,Downtown,Fenway,South_End,West_End%5D
+
+https://www.yelp.com/search?find_desc=Burgers&start=10&l=p:MA:Boston::%5BAllston/Brighton,Back_Bay,Beacon_Hill,Downtown,Fenway,South_End,West_End%5D
+
+https://www.yelp.com/search?find_desc=Burgers&start=20&l=p:MA:Boston::%5BAllston/Brighton,Back_Bay,Beacon_Hill,Downtown,Fenway,South_End,West_End%5D
+
+These are my three URLs, from above, the first thing is the Yelp's homeage "www.yelp.com". Then I try to find the Burgers, also that is show in URL("search?find_desc=Burgers""). "start=0", this is page, 0 is first page, 1 is second page. After that, the URL show the location where I want to find the Burgers restaurant. 
+
+The differences between the three URLS is only the "start=0/1/2"
+
+The parameters that my search query are "Boston::%5BAllston/Brighton,Back_Bay,Beacon_Hill,Downtown,Fenway,South_End,West_End%5D"
+
+The URL for the 7th page of Chinese restaurants in New York is "https://www.yelp.com/search?find_desc=Chinese&start=60&l=p:NY:NewYork%5D"
+

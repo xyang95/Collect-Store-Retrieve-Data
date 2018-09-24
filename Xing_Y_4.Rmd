@@ -1,0 +1,154 @@
+---
+title: "DA5020 - Homework 4"
+author: "Xing Yang"
+date: '`r Sys.Date()`'
+output:
+  word_document: default
+  tufte::tufte_handout:
+    citation_package: natbib
+    latex_engine: xelatex
+  tufte::tufte_html: default
+  pdf_document: default
+header-includes: \usepackage{framed,xcolor}
+geometry: margin=0.7in
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.width = 6,
+  fig.height = 3
+)
+```
+
+## Preparation
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(forcats)
+library(ggplot2)
+library(dplyr)
+library(plyr)
+library(stringr)
+# let `read_csv` handle special N/A values
+na.vals <- c("", "NA", "n/a", "N/A", "none")
+fmarkets <- read_csv("/Users/xingyang/Desktop/5020/farmers_market.csv",na = na.vals)
+data <- read_xls("/Users/xingyang/Desktop/5020/kyfprojects.xls", na = na.vals)
+```
+
+## Question 1 (20 points)
+### Solution
+
+```{r}
+re_facebook <- str_c(
+  "(?i)", 
+  "^(?:.*(?:f?acebook|fb)(?:\\.com)?[/ ]?", 
+  "(?:#\\!/)?(?:pages/)?)?", 
+  "(?:@)?", 
+  "(.*?)", 
+  "/?", 
+  "(?:\\?.*)?$"
+)
+re_twitter <- str_c(
+  "(?i)", 
+  "(?:.*[\\@/])?([a-z0-9_]+)"
+)
+
+fmarkets <- fmarkets %>%
+  mutate(
+    Facebook.clean = Facebook %>%
+      str_replace(re_facebook, "\\1"),
+    Facebook.clean = ifelse(Facebook.clean == "", NA, Facebook.clean),
+    Twitter.clean = Twitter %>%
+      str_replace(re_twitter, "\\1"),
+    Twitter.clean = ifelse(Facebook.clean == "" ,NA, Twitter.clean)
+  )
+```
+
+## Question 2 (20 points)
+### Solution
+
+```{r}
+re_city <- str_c(
+  "(?i)", "^([a-z]+)?(?:,.*)$"
+)
+fmarkets <- fmarkets %>%
+  mutate(
+    city.clean = city %>%
+      str_replace(re_city, "\\1"),
+    city.clean = ifelse(city.clean == "", NA, city.clean)
+  )
+fmarkets <- fmarkets %>%
+  mutate(
+    street.clean = street %>%
+      str_replace_all(
+        c("\\b(and)\\b" = "&", 
+        "(?i)\\bstr.*?(\\.|\\b)" = "St",
+        "(?i)\\bsteet?(\\.|\\b)" = "St", 
+        "(?i)\\bst.?(\\.|\\b)" = "St",
+        "(?i)\\bave.*?(\\.|\\b)" = "Ave")
+      ),
+    street.clean = ifelse(street.clean == "", NA, street.clean)
+  )
+head(fmarkets$city.clean, 100)
+head(fmarkets$street.clean, 100)
+```
+
+## Question 3 (20 points)
+### Solution
+
+```{r}
+online <- fmarkets %>%
+  dplyr::group_by(State) %>%
+  dplyr::summarise(
+    Facebook = sum(!is.na(Facebook))/n(), 
+    Twitter = sum(!is.na(Twitter))/n(), 
+    Youtube = sum(!is.na(Youtube))/n(),
+    OtherMedia = sum(!is.na(OtherMedia))/n()
+  )
+online
+```
+
+## Qustion 4 (20 points)
+
+### Solution
+
+```{r}
+fmarkets %>%
+  filter(!is.na(Location)) %>%
+  mutate(Location = fct_recode(Location,
+                               "Gov, Fed" = "Federal/State government building grounds",
+                               "Gov, Local" = "Local government building grounds",
+                               "Faith, Ins" = "Faith-based institution (e.g., church, mosque, synagogue, temple)",
+                               "Edu, Ins" = "Educational institution",
+                               "Health, Ins" = "Healthcare Institution",  
+                               "Street, Pub" = "Closed-off public street",
+                               "Farm" = "On a farm from: a barn, a greenhouse, a tent, a stand, etc",
+                               "Market" = "Co-located with wholesale market facility",
+                               "Parking, Pri" = "Private business parking lot",
+                               "Other" = "Other"
+                               )%>%
+           fct_infreq()) %>%
+  ggplot(mapping = aes(Location)) +
+  geom_bar()
+```
+
+
+## Qustion 5 (20 points)
+### Solution
+
+```{r}
+#check NA for abbreviation and name
+sum(is.na(data$`Program Name`))
+sum(is.na(data$`Program Abbreviation`))
+abb = data$`Program Abbreviation`
+new_abb = abbreviate(data$`Program Name`, named = F)
+sum(abb != new_abb)
+```
+
+So there are 491 rows that the Program Abbreviation
+does not match the Program Name. 
+

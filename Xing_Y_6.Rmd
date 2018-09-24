@@ -1,0 +1,136 @@
+---
+title: "Fall 2017 DA5020 Homework6"
+author: "Xing Yang"
+date: "2017/10/10"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###Quesion 1
+
+```{r}
+library(tidyverse)
+edu <- read_csv("/Users/xingyang/Desktop/5020/FipsEducations.csv")
+unemply <- read.csv("/Users/xingyang/Desktop/5020/FipsUnemployment.csv")
+head(edu)
+#"county_state" contain more than one atomic value.
+#Every year have four same "percent_measure" 
+#Same state has same "rural_urban_cont_code" and "description" 
+edusp <- spread(edu, percent_measure, percent)
+head(edusp)
+eduspse <- separate(edusp, county_state, into = c("state", "county"), sep = "\\|")
+head(eduspse)
+```
+
+###Question 2
+
+```{r}
+fips <- eduspse %>%
+  count(fips, county, state, rural_urban_cont_code)
+
+n <- ncol(eduspse)
+colnames(eduspse)[n] <- "percent_less_than_hs_diploma"
+education <- eduspse %>%
+  count(fips, state, county, percent_four_plus_years_college, percent_has_some_college, percent_hs_diploma, percent_less_than_hs_diploma)
+
+rural_urban_code <-  eduspse %>%
+  count(rural_urban_cont_code, description)
+```
+
+###Question 3
+
+The fips column in the education table is it a foreign key.
+The primary key for my education is the county
+The primary key for the rural_urban code_table is rural_urban_cont_code.
+
+###Question 4
+
+```{r}
+#4.0
+#In 1970, the  the percent of the population not attaining a high school diploma for the Nantucket county in Massachusetts
+eduspse %>%
+  filter(year == 1970, county == " Nantucket County") %>%
+  select(percent_less_than_hs_diploma)
+
+#In 2015
+eduspse %>%
+  filter(year == 2015, county == " Nantucket County") %>%
+  select(percent_less_than_hs_diploma)
+
+#4.1
+pro41 <- eduspse %>%
+  filter(year == 2015, state == "AL ") %>%
+  select(percent_less_than_hs_diploma)
+colMeans(pro41)
+
+#4.2
+pro42 <- eduspse %>%
+  filter(year == 2015, state == "MA ") %>%
+  select(percent_four_plus_years_college)
+colMeans(pro42)
+
+#4.3
+pro43 <- eduspse %>%
+  group_by(year) %>%
+  filter(state == "AL ") %>%
+  summarise(
+     average = mean(percent_less_than_hs_diploma)
+    )
+pro43 
+
+#4.4
+names(which.max(table(eduspse$rural_urban_cont_code)))
+
+#4.5
+pro45 <- eduspse %>%
+  filter(rural_urban_cont_code == "NULL") %>%
+  count(state, county)
+pro45 <- pro45[order(pro45$state),]
+pro45
+
+#4.6
+pro46 <- eduspse %>%
+  filter(state == "MS ", year == 2010) %>% 
+  select(percent_four_plus_years_college)
+pro46
+
+#4.7
+min(pro45$n)
+max(pro45$n)
+
+#Since the maximum value is equal the minimum value, not providing a rural code for  each conuty has the same "NULL" number with 5. So there is no the most number of counties.
+
+#4.8
+all = full_join(eduspse, unemply)
+pro48 <- all %>%
+  filter(percent_unemployed > percent_four_plus_years_college) %>%
+   select(county, state)
+pro48 <- pro48[order(pro48$state),]
+pro48
+
+#4.9
+pro49 <- eduspse %>%
+  arrange(percent_four_plus_years_college) %>%
+  select(county, state, year)
+pro49[nrow(pro49),]
+```
+
+###Question 5
+
+```{r}
+#common period 2015
+q5 <- all %>%
+  filter(year == 2015) %>%
+  select(state, county, percent_less_than_hs_diploma, percent_unemployed)
+
+ggplot(q5, mapping = aes(percent_less_than_hs_diploma, percent_unemployed)) +
+  geom_point(size = 0.1) +
+  geom_smooth(se = F)
+```
+
+There is a positive relationship between percent not attaining a high school diploma and unemployment rate, which means the lower percent not attaining a high school diploma would lead to a smaller unemployment rate. 
+
+

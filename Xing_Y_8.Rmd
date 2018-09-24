@@ -1,0 +1,287 @@
+---
+title: "DA5020 - Week 8 Assignment Web Scraping Programaically"
+author: "Xing Yang"
+date: '`r Sys.Date()`'
+output:
+  word_document: default
+  pdf_document: default
+geometry: margin=0.7in
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  # mute messages output
+  message = FALSE
+)
+```
+
+## Questions
+
+### 1
+
+```{r}
+library(rvest)
+
+page <- read_html("https://www.yelp.com/search?find_desc=Burgers&start=0&l=p:MA:Boston::%5BAllston/Brighton,Back_Bay,Beacon_Hill,Downtown,Fenway,South_End,West_End%5D")
+
+# list the children of the <html> element (the whole page)
+html_children(page)
+
+# get the root of the actual html body
+root <- html_node(page, 'body')
+```
+
+#### a
+
+```{r}
+node <- html_children(root)
+length(node)
+```
+
+#### b
+
+```{r}
+name <- html_name(node)
+name
+```
+
+#### c
+
+```{r}
+attrid <- html_attr(node, "id")
+idnumber <- is.na(attrid)[is.na(attrid) == F]
+length(idnumber)
+attrid 
+```
+
+#### d
+
+```{r}
+ad <- page %>%
+  html_nodes(".yloca-search-result")
+ad
+```
+
+### 2
+
+```{r}
+library(stringr)
+library(tibble)
+library(dplyr)
+get_yelp_sr_one_page <- function(keyword, loc, page) {
+  page <- (page-1)*10
+  page <- as.character(page)
+  yelp_url <- 'https://www.yelp.com/search?find_desc=%s&find_loc=%s&start=%s'
+  yelp_url <- sprintf(yelp_url, URLencode(keyword), URLencode(loc), URLencode(page))
+  
+  yelpsr <- read_html(yelp_url)
+  items <- yelpsr %>%
+    html_nodes("li.regular-search-result")
+  links <- items %>% html_nodes("a.biz-name")
+  # trim=T (trim = True) removes whitespaces between html text
+  names <- links %>% html_text(trim=T)
+  urls <-  links %>%
+    html_attr("href") %>%
+    # cleanup useless url parameters (which are used
+    # by yelp for analytical tracking purpose)
+    str_replace("\\?osq=.*", "")
+  pricelevels <- items %>%
+    html_nodes(".business-attribute.price-range") %>%  
+    html_text(trim=T)  %>%
+    str_count()
+  reviews <- items %>%
+    html_nodes(".rating-qualifier") %>%  
+    html_text(trim=T)   %>%  
+    str_replace("([0-9]*)\\s*[a-z]*", "\\1")
+  rating <- items %>%
+    html_nodes(".rating-large") %>%  
+    html_attr("title") %>%  
+    str_replace("([0-9]\\.[0-9])(?:.*)", "\\1")
+  URLreviews <- items %>%
+    html_nodes(".nowrap") %>%
+    html_attr("href") %>%
+    na.omit() %>%
+    str_replace("\\&osq=.*", "")
+  categories <- items %>%
+   html_nodes(".category-str-list") %>%
+   html_text(trim=T) %>%
+   str_replace_all("\\n\\s*", "")
+  address = items %>%
+   html_node('address') %>%
+   str_replace_all(c("\\n\\s*" = "",
+                    "<address>" = "",
+                    "<address>" = ""))
+  street <- str_replace(address, "(.*)<br>(?:.*)", "\\1")
+  city <- str_replace(address, "(?:.*)<br>(.*),(?:.*)", "\\1")
+  state <- str_replace(address, "(?:.*\\,\\s)([A-Z]{2})(?:.*)$", "\\1")
+  zipcode <- str_replace(address, ".*([0-9]{5}).*", "\\1")
+
+  
+  # some results might not have neighborhood or address information,
+  # therefore we cannot use selectors to select them into vectors directly.
+  # (you will see a "vector length mismatch" error)
+  
+  # we must collect data item by item for these variables, i.e., go
+  # from a column-wise approach to row-wise.
+  
+  secondary_attrs <- items %>%
+    # <div class="secondary-attributes"> is the parent of the neighborhood and address
+    # attributes. it is unlikely that an item does not have this section at all.
+    html_nodes('.secondary-attributes') %>%
+    # pass each node in the selection to a `map` function
+    purrr::map(function(item) {
+      # collect those secondary attributes one by one
+      # if an attribute is missing, it will be recorded as NA.
+      tibble(
+        neighborhood = item %>%
+          html_node('.neighborhood-str-list') %>%
+          html_text(trim=T),
+        phone = item %>%
+          html_node('.biz-phone') %>%
+          html_text(trim=T)
+      )
+    }) %>%
+    # merge rows
+    bind_rows()
+  
+  # return a data frame
+  tibble(
+    name = names,
+    url = urls,
+    price = pricelevels,
+    reviews = reviews,
+    URLreviews = URLreviews, 
+    rating = rating,
+    categories = categories,
+    street = street,
+    city = city,
+    state = state,
+    zipcode = zipcode
+    # <---- Insert here more variables ------>
+  ) %>% cbind(secondary_attrs)
+}
+
+# example output
+get_yelp_sr_one_page("burgers", loc="NewYork, NY", page=2) 
+```
+
+
+### 3
+
+```{r}
+get_yelp_mtp_page <- function(keyword, loc, startpage, endpage){
+  a = matrix(ncol = 13, nrow = 0)
+for (i in startpage : endpage){
+  onepage = get_yelp_sr_one_page(keyword, loc, page = i)
+  a = rbind(a, onepage)
+}
+  mtppage = as.data.frame(a, stringsAsFactors = FALSE)
+  return(mtppage)
+}
+
+
+get_yelp_mtp_page("burgers", loc = "Boston, MA", startpage =3, endpage = 5)
+```
+
+
+### 4
+
+```{r}
+get_yelp_mtp_page_sleep <- function(keyword, loc, startpage, endpage){
+  a = matrix(ncol = 13, nrow = 0)
+for (i in startpage : endpage){
+  onepage = get_yelp_sr_one_page(keyword, loc, page = i)
+  a = rbind(a, onepage)
+  Sys.sleep(0.5)
+}
+  outcome = as.data.frame(a, stringsAsFactors = FALSE)
+  return(outcome)
+}
+```
+
+```{r}
+
+yelp_url <- "https://www.yelp.com/search?find_desc=Burgers&find_loc=Boston%2C+MA&ns=1"
+
+yelpsr <- read_html(yelp_url)
+  item1 <- yelpsr %>%
+    html_nodes("li.regular-search-result")
+
+rating <- item1 %>%
+    html_nodes(".rating-large") %>%
+  html_attrs()
+
+favorable = items %>%
+          html_node(".sort-num_votes-visible") %>%
+  html_text() 
+favorable %>%
+  str_extract("Gross:\n.+\n") %>%
+  str_extract("[0-9]+.[0-9]") %>%
+  as.numeric()
+  str_replace_all(c(
+    "(?!)[a-z]*" = "",
+    "\n" = "",
+    "\\s*" = ""
+  )) 
+  
+director = items %>%
+          html_node(".text-muted~ .text-muted+ p , .ratings-bar~ .text-muted+ p") %>%  
+          html_text() %>%
+          str_extract_all(c('Director.+\n.+\n', 'Director.+\n.+\n.+\n')) %>%
+          unlist() %>%
+          str_replace_all(c(
+            "Director[\\S]*:" = "",
+            "\n" = "",
+            "\\s*" = "",
+            "\\|" = ""
+          ))
+          
+
+    
+director
+
+director = items %>%
+          html_node(".text-muted~ .text-muted+ p , .ratings-bar~ .text-muted+ p") %>%  
+          html_text() %>%
+          str_extract("(Director:\n.+\n)|(Directors:\n.+\n.+\n)|(Directors:\n.+\n.+\n.+\n)") %>%
+          unlist() %>%
+          str_replace_all(c(
+            "Director[\\S]*:" = "",
+            "\n" = "",
+            "\\s*" = "",
+            "\\|" = ""
+          ))
+          
+
+    
+director    
+
+stars = items %>%
+          html_node(".text-muted~ .text-muted+ p , .ratings-bar~ .text-muted+ p") %>%  
+          html_text() %>%
+          str_extract("((Stars:\n.+\n.+\n.+\n.+\n)|(Stars:\n.+\n.+\n.+\n)|(Stars:\n.+\n.+\n)|(Star:\n.+\n))") %>%
+          str_replace_all(c(
+            'Star[\\S]*:' = "",
+            '\n' = ""))
+stars
+favorable
+diectorstar = items %>%
+          html_node(".text-muted~ .text-muted+ p , .ratings-bar~ .text-muted+ p") %>%  
+          html_text()
+diectorstar%>%
+str_extract('Stars:\n.+\n.+\n.+\n.+\n') %>%
+  str_replace_all(c("\n" = ""))
+diectorstar
+diectorstar%>%
+str_extract('\n.+\n')
+
+favorable[1]
+a <- unlist(strsplit(favorable, "Gross"))
+a[1]
+str_extract_all(a[2], c("[0-9]+,[0-9]+", "[0-9]+"))
+rating[1]
+favorable[1]
+```
+
+%>%  
+    html_attr("title")

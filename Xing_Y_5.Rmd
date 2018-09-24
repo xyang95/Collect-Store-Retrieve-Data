@@ -1,0 +1,267 @@
+---
+title: "DA5020 Howework 5"
+author: "Xing Yang"
+date: "2017/10/6"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+library(lubridate)
+library(tidyverse)
+library(readxl)
+library(forcats)
+library(ggplot2)
+library(dplyr)
+library(stringr)
+na.vals <- c("", "NA", "n/a", "N/A", "none")
+fmarkets <- read_csv("/Users/xingyang/Desktop/5020/farmers_market.csv",na = na.vals)
+```
+
+###Question 1
+
+```{r}
+fmarkets$Season1Days = str_count(fmarkets$Season1Time, ";")
+head(fmarkets$Season1Days)
+```
+
+###Quesiton 2
+
+```{r}
+fmarkets$WeekendOpen = str_detect(fmarkets$Season1Time, "Sat | Sun")
+head(fmarkets$WeekendOpen)
+```
+
+###Question 3
+
+```{r}
+#convert am/pm to AM/PM
+Season1Time <- toupper(fmarkets$Season1Time)
+#get first day opentime and closetime 
+re_date <- str_c("(?i)",
+               "^(?:\\s*[a-z]{3}:\\s*)?",
+               "(.*)?")
+#delete the date 
+df1 = str_replace(fmarkets$Season1Time, re_date, "\\1")
+#get the opentime and closetime
+opentime1 <-  str_match(fmarkets$Season1Time, "(\\d{1,2}:\\d{2} *(?:AM|PM)) *- *(\\d{1,2}:\\d{2} *(?:AM|PM))")
+Opentime1 = parse_date_time(opentime1[,2], "%H%M%p")
+Closetime1 = parse_date_time(opentime1[,3], "%H%M%p")
+
+#get second day opentime and close time 
+re_time1 = str_c("(?i)",
+                 "^(?:(\\d{1,2}:\\d{2} *(?:AM|PM)) *- *(\\d{1,2}:\\d{2} *(?:AM|PM));)?")
+#delete the operate time
+df2 = str_replace(df1, re_time1, " ")
+#delete the date
+df2 = str_replace(df2, re_date, "\\1")
+#get the opentime and closetime
+opentime2 <-  str_match(df2, "(\\d{1,2}:\\d{2} *(?:AM|PM)) *- *(\\d{1,2}:\\d{2} *(?:AM|PM))")
+Opentime2 = parse_date_time(opentime2[,2], "%H%M%p")
+Closetime2 = parse_date_time(opentime2[,3], "%H%M%p")
+
+#get third day opentime and closetime 
+re_time2 = str_c("(?i)","^(?:(\\d{1,2}:\\d{2} *(?:AM|PM)) *- *(\\d{1,2}:\\d{2} *(?:AM|PM));)?")
+df3 = str_replace(df2, re_time2, " ")
+df3 = str_replace(df3, re_date, "\\1")
+opentime3 <-  str_match(df3, "(\\d{1,2}:\\d{2} *(?:AM|PM)) *- *(\\d{1,2}:\\d{2} *(?:AM|PM))")
+Opentime3 = parse_date_time(opentime3[,2], "%H%M%p")
+Closetime3 = parse_date_time(opentime3[,3], "%H%M%p")
+
+#get fourth day
+re_time3 = str_c("(?i)","^(?:(\\d{1,2}:\\d{2} *(?:AM|PM)) *- *(\\d{1,2}:\\d{2} *(?:AM|PM));)?")
+df4 = str_replace(df3, re_time3, " ")
+df4 = str_replace(df4, re_date, "\\1")
+opentime4 <-  str_match(df4, "(\\d{1,2}:\\d{2} *(?:AM|PM)) *- *(\\d{1,2}:\\d{2} *(?:AM|PM))")
+Opentime4 = parse_date_time(opentime4[,2], "%H%M%p")
+Closetime4 = parse_date_time(opentime4[,3], "%H%M%p")
+
+#get fifth day
+re_time4 = str_c("(?i)","^(?:(\\d{1,2}:\\d{2} *(?:AM|PM)) *- *(\\d{1,2}:\\d{2} *(?:AM|PM));)?")
+df5 = str_replace(df4, re_time4, " ")
+df5 = str_replace(df5, re_date, "\\1")
+opentime5 <-  str_match(df5, "(\\d{1,2}:\\d{2} *(?:AM|PM)) *- *(\\d{1,2}:\\d{2} *(?:AM|PM))")
+Opentime5 = parse_date_time(opentime5[,2], "%H%M%p")
+Closetime5 = parse_date_time(opentime5[,3], "%H%M%p")
+
+#get sixth day
+re_time5 = str_c("(?i)","^(?:(\\d{1,2}:\\d{2} *(?:AM|PM)) *- *(\\d{1,2}:\\d{2} *(?:AM|PM));)?")
+df6 = str_replace(df5, re_time5, " ")
+df6 = str_replace(df6, re_date, "\\1")
+opentime6 <-  str_match(df6, "(\\d{1,2}:\\d{2} *(?:AM|PM)) *- *(\\d{1,2}:\\d{2} *(?:AM|PM))")
+Opentime6 = parse_date_time(opentime6[,2], "%H%M%p")
+Closetime6 = parse_date_time(opentime6[,3], "%H%M%p")
+
+#get seventh day
+re_time6 = str_c("(?i)","^(?:(\\d{1,2}:\\d{2} *(?:AM|PM)) *- *(\\d{1,2}:\\d{2} *(?:AM|PM));)?")
+df7 = str_replace(df6, re_time6, " ")
+df7 = str_replace(df7, re_date, "\\1")
+opentime7 <-  str_match(df7, "(\\d{1,2}:\\d{2} *(?:AM|PM)) *- *(\\d{1,2}:\\d{2} *(?:AM|PM))")
+Opentime7 = parse_date_time(opentime7[,2], "%H%M%p")
+Closetime7 = parse_date_time(opentime7[,3], "%H%M%p")
+
+#compare each days' close time with 6:00PM
+target <- "0000-01-01 18:00:00 UTC"
+compare1 = strptime(Closetime1, "%Y-%m-%d %H:%M:%OS") > strptime(target, "%Y-%m-%d %H:%M:%OS")
+compare2 = strptime(Closetime2, "%Y-%m-%d %H:%M:%OS") > strptime(target, "%Y-%m-%d %H:%M:%OS")
+compare3 = strptime(Closetime3, "%Y-%m-%d %H:%M:%OS") > strptime(target, "%Y-%m-%d %H:%M:%OS")
+compare4 = strptime(Closetime4, "%Y-%m-%d %H:%M:%OS") > strptime(target, "%Y-%m-%d %H:%M:%OS")
+compare5 = strptime(Closetime5, "%Y-%m-%d %H:%M:%OS") > strptime(target, "%Y-%m-%d %H:%M:%OS")
+compare6 = strptime(Closetime6, "%Y-%m-%d %H:%M:%OS") > strptime(target, "%Y-%m-%d %H:%M:%OS")
+compare7 = strptime(Closetime7, "%Y-%m-%d %H:%M:%OS") > strptime(target, "%Y-%m-%d %H:%M:%OS")
+comparedf = cbind(compare1, compare2, compare3, compare4, compare5, compare6, compare7)
+fmarkets$Openafter6PM = apply(comparedf, 1, function(r) any(r %in% "TRUE"))
+head(fmarkets$Openafter6PM, 10)
+#if return TRUE, that market opens after 6:00PM.
+
+
+#get the operate hours for each day
+difftime1 <- difftime(Closetime1, Opentime1, units="hour")
+difftime2 <- difftime(Closetime2, Opentime2, units="hour")
+difftime3 <- difftime(Closetime3, Opentime3, units="hour")
+difftime4 <- difftime(Closetime4, Opentime4, units="hour")
+difftime5 <- difftime(Closetime5, Opentime5, units="hour")
+difftime6 <- difftime(Closetime6, Opentime6, units="hour")
+difftime7 <- difftime(Closetime7, Opentime7, units="hour")
+timediff = cbind(difftime1, difftime2,difftime3, difftime4, difftime5, difftime6, difftime7)
+fmarkets$opentime = rowMeans(timediff, na.rm = T, dims = 1)
+fmarkets$openmore4 = fmarkets$opentime >4
+head(fmarkets$openmore4, 10)
+#if return TRUE, thata market open more than 4 hours.
+```
+
+###Question 4
+
+```{r}
+#split the date 
+df = data.frame(fmarkets)
+df1 = subset(df,sapply(strsplit(df$Season1Date, "\\s+"), length) == 3)
+df2 = subset(df,sapply(strsplit(df$Season1Date, "\\s+"), length) == 5)
+df3 = subset(df,sapply(strsplit(df$Season1Date, "\\s+"), length) == 7)
+df4 = subset(df1, str_count(df1$Season1Date, boundary("word")) == 3)
+df5 = subset(df1, str_count(df1$Season1Date, boundary("word")) == 7)
+
+df4date <- unlist(strsplit(df4$Season1Date , " to "))
+df5date <- unlist(strsplit(df5$Season1Date , " to "))
+df2date <- unlist(strsplit(df2$Season1Date , " to "))
+df3date <- unlist(strsplit(df3$Season1Date , " to "))
+
+df2$opendate <- df2date[seq(1, length(df2date), 2)]
+df3$opendate <- df3date[seq(1, length(df3date), 2)]
+df4$opendate <- df4date[seq(1, length(df4date), 2)]
+df5$opendate <- df5date[seq(1, length(df5date), 2)]
+df2$closedate <- df2date[seq(2, length(df2date), 2)]
+df3$closedate <- df3date[seq(2, length(df3date), 2)]
+df4$closedate <- df4date[seq(2, length(df4date), 2)]
+df5$closedate <- df5date[seq(2, length(df5date), 2)]
+
+df2$opendate[3] <- "April 1, 2017"
+df2$opendate[4] <- "April 1, 2017"
+df2$opendate[8] <- "June 23, 2017"
+df2$closedate[1] <- "October 1, 2017"
+df2$closedate[2] <- "September 1, 2017"
+df2$closedate[5] <- "December 1, 2017"
+df2$closedate[6] <- "November 1, 2017"
+df2$closedate[7] <- "October 1, 2017"
+df2$closedate[8] <- "September 8, 2017"
+df3$opendate[22] <- "January 1, 2013"
+df3$closedate[3] <- "October 13, 2011"
+df3$closedate[6] <- "October 6, 2011"
+df3$closedate[22] <- "December 31, 2013"
+df3$opendate[20] <- "January 12, 2012"
+df3$closedate[17] <- "October 30, 2012"
+df3$closedate[21] <- "September 12, 2012"
+df2$closedate[4] <- "September 24, 2011"
+
+myFun <- function(x, dummyDay = "01", dummyYear = "2012"){
+  require(lubridate)
+  
+  x <- ifelse(substr(x, 1, 3) %in% month.abb,
+              paste(match(substr(x, 1, 3), month.abb),
+                    dummyDay,
+                    dummyYear, sep = "/"), x)
+  #return date
+  mdy(x)
+}
+
+df2$opendate <- as.Date(df2$opendate, format = "%B %d, %Y")
+df3$opendate <- as.Date(df3$opendate, format = "%B %d, %Y")
+df3$closedate <- as.Date(df3$closedate, format = "%B %d, %Y")
+df2$closedate <- as.Date(df2$closedate, format = "%B %d, %Y")
+
+df4$opendate <- myFun(df4$opendate)
+df4$closedate <- myFun(df4$closedate)
+
+df5$opendate <- as.Date(df5$opendate, format = "%m/%d/%Y")
+df5$closedate <- as.Date(df5$closedate, format = "%m/%d/%Y")
+
+#so I get the begindate and enddate in uniform fomart
+newdf <- data.frame(rbind(df2, df3, df4, df5))
+head(newdf$opendate)
+head(newdf$closedate)
+
+opendate12 <- as.Date(strftime(newdf$opendate, format="2012-%m-%d"))
+closedate12 <- as.Date(strftime(newdf$closedate, format="2012-%m-%d"))
+int12 = interval(ymd(opendate12), ymd(closedate12))
+
+d <- mdy(c("01/01/2012", "04/01/2012", "07/01/2012", "10/01/2012"))
+spring = interval(d[1], d[2])
+summer = interval(d[2], d[3])
+fall = interval(d[3], d[4])
+winter = interval(d[4], d[1])
+spring1 =  int12 %within% spring
+summer1 =  int12 %within% summer
+fall1 =  int12 %within% fall
+winter1 =  int12 %within% winter
+spring2 =  spring %within% int12
+summer2 =  summer %within% int12
+fall2 =  fall %within% int12
+winter2 =  winter %within% int12
+
+newdf$spring <- ifelse(spring1 == "TRUE"|spring2 == "TRUE", TRUE, FALSE)
+newdf$summer <- ifelse(summer1 == "TRUE"|summer2 == "TRUE", TRUE, FALSE)
+newdf$fall <- ifelse(fall1 == "TRUE"|fall2 == "TRUE", TRUE, FALSE)
+newdf$winter <- ifelse(winter1 == "TRUE"|winter2 == "TRUE", TRUE, FALSE)
+
+head(newdf$spring, 10)
+head(newdf$summer, 10)
+head(newdf$fall, 10)
+head(newdf$winter, 10)
+
+d <- mdy(c("1/1/2012", "4/1/2012", "7/1/2012", "10/1/2012", "12/31/2012"))
+halfyear = interval(d[1], d[3])
+yearround = interval(d[1], d[5])
+intyear = interval(ymd(newdf$opendate), ymd(newdf$closedate))
+newdf$Halfyear =  halfyear %within% intyear
+newdf$Yearround =  yearround %within% intyear
+head(newdf$Halfyear, 10)
+head(newdf$Yearround, 10)
+```
+
+###Question 5
+
+```{r}
+#We can determine whether a state is in the north of American
+mn = ifelse(newdf$State == "Minnesota"&newdf$winter == "TRUE", TRUE, FALSE)
+probmn <- length(mn[mn==FALSE])/length(mn)
+probmn
+#the probability is 0.99, so we can say the MN is in the very north of American, also we check WA
+wa = ifelse(newdf$State == "Washington"&newdf$winter == "TRUE", TRUE, FALSE)
+probwa <- length(wa[wa==FALSE])/length(wa)
+probwa
+#similar outcome whith MN
+#Also we can check other states using the same method.
+#This method still have some weakness, if some states are really in Norht of American, but the probability is small, mabye we need to modify the time of winter. Also, we need to calculate the other seasons time with states to ger a more believable outcome.
+```
+
+
+
+
+
+
+
+

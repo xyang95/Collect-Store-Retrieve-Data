@@ -1,0 +1,306 @@
+---
+title: "DA5020 - Week 10 SQLite and comparing dplyr to SQL"
+author: "Xing Yang"
+date: '`r Sys.Date()`'
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  # mute messages output
+  message = FALSE
+)
+```
+
+## Questions 1
+
+```{r}
+#tidy data
+library(tidyverse)
+library(dplyr)
+library(stringr)
+edu <- read_csv("/Users/xingyang/Desktop/5020/FipsEducations.csv")
+unemply <- read.csv("/Users/xingyang/Desktop/5020/FipsUnemployment.csv")
+edusp <- spread(edu, percent_measure, percent)
+eduspse <- separate(edusp, county_state, into = c("state", "county"), sep = "\\|")
+eduspse$state <- str_replace(eduspse$state, " ", "")
+eduspse$county <- str_replace(eduspse$county, " ", "")
+fips <- eduspse %>%
+  dplyr::count(fips, county, state, rural_urban_cont_code)
+colnames(eduspse)[ncol(eduspse)] <- "percent_less_than_hs_diploma"
+education <- eduspse %>%
+  dplyr::count(year, county, state, percent_four_plus_years_college, percent_has_some_college, percent_hs_diploma, percent_less_than_hs_diploma)
+education <- education[-ncol(education)]
+code <-  eduspse %>%
+  dplyr::count(rural_urban_cont_code, description)
+
+library(RSQLite)
+db <- dbConnect(SQLite(),dbname="hw10.sqlite")
+dbGetQuery(db, "CREATE TABLE unemply(
+           fips INTEGER,
+           year INTEGER,
+           percent_unemployed NUMERIC
+           )")
+dbWriteTable(db, "unemply", unemply, append=TRUE, row.names=FALSE)
+
+dbGetQuery(db, "CREATE TABLE code(
+           rural_urban_cont_code TEXT PRIMARY KEY,
+           description TEXT,
+           n INTEGER
+           )")
+dbWriteTable(db, "code", code, append=TRUE, row.names=FALSE)
+
+dbGetQuery(db, "CREATE TABLE education(
+           year INTEGER,
+           county TEXT,
+           state TEXT,
+           percent_four_plus_years_college NUMERIC,
+           percent_has_some_college NUMERIC,
+           percent_hs_diploma NUMERIC,
+           percent_less_than_hs_diploma NUMERIC,
+           PRIMARY KEY (year, state, county)
+           )")
+dbWriteTable(db, "education", education, append=TRUE, row.names=FALSE)
+
+
+dbGetQuery(db, "CREATE TABLE fips(
+           fips INTEGER PRIMARY KEY,
+           county TEXT,
+           state TEXT,
+           rural_urban_cont_code TEXT,
+           n INTEGER,
+           FOREIGN KEY(county) REFERENCES education(county)
+           FOREIGN KEY(state) REFERENCES education(state)
+           FOREIGN KEY(rural_urban_cont_code) REFERENCES code(rural_urban_cont_code)
+           )")
+dbWriteTable(db, "fips", fips, append=TRUE, row.names=FALSE)
+```
+
+## Question 2
+
+###2.0
+
+```{r}
+#1970
+query <- "SELECT
+            percent_less_than_hs_diploma
+          FROM
+            education
+          WHERE
+            year = 1970 AND county = 'Nantucket County';"
+dbGetQuery(db, query)
+
+#2015
+query <- "SELECT
+            percent_less_than_hs_diploma
+          FROM
+            education
+          WHERE
+            year = 2015 AND county = 'Nantucket County';"
+dbGetQuery(db, query)
+```
+
+### 2.1
+
+```{r}
+query <- "SELECT
+            AVG(percent_less_than_hs_diploma)
+          FROM
+            education
+          WHERE
+            year = 2015 AND state = 'AL';"
+dbGetQuery(db, query)
+```
+
+### 2.2
+
+```{r}
+query <- "SELECT
+            AVG(percent_four_plus_years_college)
+          FROM
+            education
+          WHERE
+            year = 2015 AND state = 'MA';"
+dbGetQuery(db, query)
+```
+
+### 2.3
+
+```{r}
+query <- "SELECT
+            year,
+            AVG(percent_less_than_hs_diploma)
+          FROM
+            education
+          WHERE
+            state = 'AL'
+          GROUP BY 
+            year
+          ORDER BY
+            AVG(percent_less_than_hs_diploma) DESC;"
+dbGetQuery(db, query)
+```
+
+### 2.4
+
+```{r}
+query <- "SELECT
+            rural_urban_cont_code
+          FROM
+            code
+          ORDER BY
+            n DESC
+          LIMIT 1;"
+dbGetQuery(db, query)
+```
+
+### 2.5
+
+```{r}
+query <- "SELECT
+            county, state
+          FROM
+            fips
+          WHERE
+            rural_urban_cont_code = 'NULL'
+          ORDER BY
+            state;"
+dbGetQuery(db, query)
+```
+
+### 2.6
+
+```{r}
+query <- "SELECT
+            percent_four_plus_years_college
+          FROM
+            education
+          WHERE
+            year = 2010 AND state = 'MS';"
+dbGetQuery(db, query)
+```
+
+### 2.7
+
+```{r}
+query <- "SELECT
+            county, state
+          FROM
+            fips
+          WHERE
+            n = (SELECT max(n) FROM fips)
+          LIMIT 3;"
+dbGetQuery(db, query)
+
+query <- "SELECT
+            MAX(n), MIN(n)
+          FROM
+            fips
+          GROUP BY
+            county
+          LIMIT 3;"
+dbGetQuery(db, query)
+#Since the maximum value is equal the minimum value, not providing a rural code for  each conuty has the same "NULL" number with 5. So there is no the most number of counties.
+```
+
+### 2.8
+
+```{r}
+query <- "SELECT
+            new.state, new.county
+          FROM
+            unemply JOIN (SELECT fips.fips, fips.state, fips.county, education.percent_four_plus_years_college FROM fips JOIN education ON fips.state = education.state AND fips.county = education.county WHERE education.year = 2015) new
+              ON unemply.fips = new.fips
+          WHERE
+            unemply.percent_unemployed > new.percent_four_plus_years_college AND unemply.year = 2015
+          ORDER BY
+            state;"
+dbGetQuery(db, query)
+```
+
+### 2.9
+
+```{r}
+query <- "SELECT
+            year, county, state
+          FROM
+            education
+          WHERE
+            percent_four_plus_years_college = (SELECT max(percent_four_plus_years_college) FROM education);"
+dbGetQuery(db, query)
+```
+
+## Question 3
+
+For my part, I think dplyr statements is better than SQL SELECT. First dplyr is easier to use, we can so many function to get data that we want, just like mean(), sum(), count(). But in SQL SELECT, we cannot use these functions, we must use some functions which are exist in SQL such that AVE, MAX, so SQL SELECT is not design for R but for itself. Everytime, when I use SQL SELECT to selcet data, I have to use double quotation marks in which I need to write SQL's code which is its rule, not R. Also, SQL is just a package in R, when I use SQL SELECT, I need write more words and contain uppercase and lowercase like dbGetQuery(), FROM. I think this is wasting my time. So, I do the Homework 10 that take more time that Homework 8, because this is my first time to use SQL, too. What is more, I think the code of dplyr is easier to understand for me. Furthermore, when I use SQL SELECT which means I need create a SQL database that would occupancy my laptop storage and take more work than dplyr. So I think dplyr is better. 
+
+## Question 4
+
+```{r}
+get_state_county_education_data_dplyr <- function(edf, state){
+  s <- state
+  education %>%
+  filter(state == s) %>%
+  ggplot(aes(year)) + 
+    geom_line(aes(y = percent_four_plus_years_college, colour = "percent_four_plus_years_college")) + 
+    geom_line(aes(y = percent_has_some_college, colour = "percent_has_some_college"))+
+    geom_line(aes(y = percent_hs_diploma, colour = "percent_hs_diploma"))+
+    geom_line(aes(y = percent_less_than_hs_diploma, colour = "percent_less_than_hs_diploma"))+
+    facet_wrap(~county) +
+    theme(axis.text.x = element_text(family="Times", face="italic",size=rel(0.1)))
+}
+get_state_county_education_data_dplyr(edf, state = "AL")
+```
+
+## Question 5
+
+```{r}
+get_state_county_education_data_sql <- function(edSQL, state){
+  a <- dbGetQuery(db, paste("SELECT *",
+                      "FROM education",
+                      "WHERE state = ", state ))
+  ggplot(a, aes(year)) + 
+    geom_line(aes(y = percent_four_plus_years_college, colour = "percent_four_plus_years_college")) + 
+    geom_line(aes(y = percent_has_some_college, colour = "percent_has_some_college"))+
+    geom_line(aes(y = percent_hs_diploma, colour = "percent_hs_diploma"))+
+    geom_line(aes(y = percent_less_than_hs_diploma, colour = "percent_less_than_hs_diploma"))+
+    facet_wrap(~county) +
+    theme(axis.text.x = element_text(family="Times", face="italic",size=rel(0.1)))
+}
+get_state_county_education_data_sql(edSQL, state = "'AL'")
+```
+
+## Question 6
+
+```{r}
+un <- left_join(unemply, fips)
+get_state_county_unemployment_data_dplyr <- function(udf, state){
+  s <- state
+  un %>%
+    filter(state == s) %>%
+    ggplot(aes(year)) + 
+    geom_line(aes(y = percent_unemployed)) + 
+    facet_wrap(~county)+
+    theme(axis.text.x = element_text(family="Times", face="italic",size=rel(0.1)))
+}
+get_state_county_unemployment_data_dplyr(udf, state = "NY")
+```
+
+## Question 7
+
+```{r}
+get_state_county_unemployment_data_sql <- function(udfSQL, state){
+  a <- dbGetQuery(db, paste("SELECT year, state, county, percent_unemployed",
+                      "FROM unemply LEFT JOIN fips ON unemply.fips == fips.fips",
+                      "WHERE state = ", state ))
+  ggplot(a, aes(year)) + 
+    geom_line(aes(y = percent_unemployed)) + 
+    facet_wrap(~county)+
+    theme(axis.text.x = element_text(family="Times", face="italic",size=rel(0.1)))
+}
+get_state_county_unemployment_data_sql(udfSQL, state = "'NY'")
+dbDisconnect(db)
+```
+

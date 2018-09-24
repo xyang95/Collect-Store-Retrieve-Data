@@ -1,0 +1,95 @@
+---
+title: "DA5020 - Week 12 MongoLite"
+author: "Xing Yang"
+date: '`r Sys.Date()`'
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  # mute messages output
+  message = FALSE
+)
+```
+
+## Questions 1
+
+```{r}
+library(mongolite)
+library(tidyverse)
+authors <- read.csv("/Users/xingyang/Desktop/5020/hw/authors.csv", na.strings = "")
+authors$dob <- as.Date(authors$dob, format = "%m/%d/%Y")
+author <- mongo(collection = "authors", db = "xy") 
+author$insert(authors)
+
+books <- read.csv("/Users/xingyang/Desktop/5020/hw/Books.csv", na.strings = "")
+book <- mongo(collection = "books", db = "xy")
+book$insert(books)
+
+publishers <- read.csv("/Users/xingyang/Desktop/5020/hw/Publishers.csv", na.strings = "")
+publishers$date <- as.Date(publishers$date, format = "%m/%d/%Y")
+publisher <- mongo(collection = "publishers", db = "xy") 
+publisher$insert(publishers)
+ 
+users <- read.csv("/Users/xingyang/Desktop/5020/hw/Users.csv", na.strings = "")
+users1 = users %>%
+separate(dateOfCreation, into = c("month", "day", "year"), sep = "\\/")
+users$year <- users1$year
+users$dateOfCreation <- as.Date(users$dateOfCreation, format = "%m/%d/%Y")
+user <- mongo(collection = "users", db = "xy")
+user$insert(users)
+```
+
+## Question 2
+
+```{r}
+#2.0
+book$count()
+#There are two books in the collection.
+
+#2.1
+book$find()
+
+#2.2
+book$find('{"author":"Danielle Steel"}')
+
+#2.3
+#user$find('{"dateOfCreation" : {"$gt" :{"$date" : "2014-12-15T00:00:00Z"}}, "city": "Boston"}')
+
+user$find('{"city":"Boston","year" :"2015"}')
+
+#2.4
+book$find('{"publisher_1":{"$exists": true}}')
+
+#2.5
+book$find('{"notebody":{"$exists": true}}')
+
+#2.6
+publisher$find(sort = '{"date":-1}')
+
+#2.7
+user$aggregate('[{"$group":{"_id":"$state", "Count": {"$sum":1}}}]') %>% 
+  arrange(desc(Count))
+#Massachusetts contains the most number of users.
+
+#2.8
+user$count('{"year" : "2015"}')
+#In the year 2015, there are 2 users joined the library.
+
+#2.9
+user$aggregate('[{"$group":{"_id":"$zip", "Count":{"$sum": 1}}}]') %>% 
+  arrange(desc(Count))
+#Zipcode with the most number of users is 02140.
+```
+
+## Question 3
+
+These papers compare between Cassandra, Couchbase, and MongoDB. The paper “high performance benckmarking: mongoDB and NoSQL systems” is foucus on the optimized, durability optimized and the balanced. From this paper we know that, Cassandra provides durability by appending writes to a commitlog first. This means that only the commitlog needs to be fsync'd, which, if the commitlog is on its own volume, obviates the need for seeking since the commitlog is append-only. MongoDB stores and applies write operations in memory and in the on-disk journal before the changes are present in the data files on disk. Writes to the journal are atomic, ensuring the consistency of the on-disk journal files. And Couchbase Server is an asynchronous system, any mutation operation is committed first to DRAM and then queued to be written to disk. The client is returned an acknowledgment almost immediately so that it can continue working. Also we know that between Couchbase Server and MongoDB that Couchbase Server has 3 times as many active nodes as MongoDB.
+
+And the another one which based on the throughput optimized with Read Latency, Update Latency, and Couchbase Server Max Load Testing indecated that MongoDB provides greater performance than Couchbase or Cassandra in all the tests. The first thing I think that makes the differents is that the second paper used 9 nodes and we know that MongoDB required less nodes than Couchbase, which means that used that many nodes would give an adventage to Couchbase. And also MongoDB can write faster than read, which means that we should comapre with not only 50% read and 50% write, we shoud do more comparison than that. And I think MongoDB has the lower throughput than Couchbase but better read latencies than Couchbase. They all have different pros and cons, we can't simply say one is better than the other by comparing just few results.
+
+
+
+

@@ -1,0 +1,137 @@
+---
+title: "Homework 2"
+author: "Xing Yang"
+date: "2017/9/14"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+$\overline{x+y}$
+
+```{r}
+library(nycflights13)
+library(tidyverse)
+```
+
+##5.2.4
+###Question1
+
+```{r}
+a = flights
+#1
+filter(a, arr_delay >= 120)
+#2
+filter(a, dest == "IAH" | dest == "HOU")
+#3
+filter(a, carrier %in% c('UA', 'AA', 'DL'))
+#4
+filter(a, month %in% c(7, 8, 9))
+#5
+filter(a, arr_delay > 120 & dep_delay <= 0)
+#6
+filter(a, dep_delay >= 60 & dep_delay-arr_delay > 30)
+#7
+filter(a, dep_time <=0600 & dep_time >= 0000)
+```
+
+###Question2
+
+```{r}
+?between
+```
+
+This is equal to x >= left & x <= right.
+
+```{r}
+filter(a, between(month, 7, 9))
+filter(a, between(dep_time, 0000, 0600))
+```
+
+##5.3.1
+###Question4
+
+```{r}
+#longest flights
+arrange(a, desc(distance))
+#shortest flights
+arrange(a, distance)
+```
+
+##5.4.1
+###Question2
+
+```{r}
+select(a, year, year)
+```
+
+It just shows the the year only once.
+
+###Question3
+
+```{r}
+?one_of()
+```
+
+one_of() can choose variables in character vector. Then we can use in select()
+
+```{r}
+vars <- c("year", "month", "day", "dep_delay", "arr_delay")
+select(a, one_of(vars))
+```
+
+##5.5.2
+###Question4
+
+```{r}
+a %>%
+  mutate(rank=min_rank(desc(dep_delay))) %>%
+  filter(rank <= 10) %>%
+  arrange(rank) %>%
+  select(month, day, dep_delay, rank)
+```
+
+##5.7.1
+###Quesion2
+
+```{r}
+a %>%
+  group_by(tailnum) %>%
+  summarise(arr_delay = mean(arr_delay, na.rm = T)) %>%
+  filter(rank(desc(arr_delay)) <= 1)
+```
+
+###Question3
+
+```{r}
+a %>%
+  group_by(hour) %>%
+  summarise(arr_delay = mean(arr_delay, na.rm = T)) %>%
+  arrange(arr_delay)
+```
+
+##5.6.7
+###Quesion4
+
+```{r}
+b = 
+  a %>%
+  group_by(year, month, day) %>%
+  mutate(cancelled_filght = (is.na(arr_delay) | is.na(dep_delay))) %>%
+  summarise(cancelled = mean(cancelled_filght),
+            dep_delay = mean(dep_delay, na.rm = TRUE))
+
+ggplot(data = b, aes(x = dep_delay, cancelled)) +
+  geom_point() +
+  geom_smooth(se = F)
+```
+
+Yes, the proportion of cancelled flights is related to the average delay.
+
+
+
+
+
+
